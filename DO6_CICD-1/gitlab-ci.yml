@@ -1,0 +1,60 @@
+stages:
+  - build
+  - style_check
+  - integration_tests
+  - deploy
+stage_build:
+  stage: build
+  script:
+    - cd src/cat 
+    - make
+    - cd ../grep
+    - make
+  artifacts:
+    paths:
+      - src/cat
+      - src/grep
+    expire_in: 30 days
+  after_script:
+      - bash telegram.sh
+
+stage_style_check:
+  stage: style_check
+  script:
+    - cd src/cat  
+    - make clang
+    - if git diff --exit-code; then
+             echo "Нет изменений. Ничего не делаем.";
+      else
+            echo "Есть изменния. Выход с ошибкой";
+            exit 1;
+      fi
+    - cd ../grep 
+    - make clang
+    - if git diff --exit-code; then
+             echo "Нет изменений. Ничего не делаем.";
+      else
+            echo "Есть изменния. Выход с ошибкой";
+            exit 1;
+      fi  
+  after_script:
+     - bash telegram.sh
+
+testing:
+  stage: integration_tests
+  script:
+    - cd src/cat
+    - make test 
+    - cd ../grep
+    - make test
+  after_script:
+    - bash telegram.sh
+
+deployment:
+        stage: deploy
+        when: manual
+        script:
+               - chmod +x copy.sh
+               - bash copy.sh
+        after_script:
+               - bash telegram.sh
